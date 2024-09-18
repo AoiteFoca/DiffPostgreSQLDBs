@@ -1,6 +1,6 @@
 -----------------------------------Tabelas---------------------------------------
 --Banco 1
-USE [Nome_Do_Seu_Banco]; --Faz a mudança de conexão para o primeiro banco
+USE [Nome_Do_Seu_Banco1]; --Faz a mudança de conexão para o primeiro banco
 GO --E então ele deverá:
 SELECT --Realizar a busca de:
     t.name AS TableName, --Nome da tabela
@@ -51,6 +51,8 @@ ORDER BY
 SELECT COUNT(DISTINCT t.name) AS TableCount
 FROM sys.tables t;
 
+----------------------------------------------
+
 --Agora, caso você queira identificar quais são as tabelas "diferença" entre os bancos, veja o trecho abaixo:
 --Primeiro Banco
 SELECT TableName --Seleção do nome das tabelas
@@ -67,6 +69,88 @@ EXCEPT
 SELECT TableName
 FROM #TempTablesDB1;
 
+----------------------------------------------
+
 --Não se esqueça de dropar essas tabelas temporárias quando não for mais utilizar ou quiser refazer a consulta:
 DROP TABLE #TempTablesDB1;
 DROP TABLE #TempTablesDB2;
+
+--E caso a gente queira ver o que tem dentro dessas tabelas, utilizamos o seguinte trecho:
+SELECT * FROM Nome_Da_Tabela; --Seleciona tudo da table
+EXEC sp_spaceused Nome_Da_Tabela; --Apresenta os valores do name, rows, reserved, data, index_size e unused da tabela em questão.
+
+-----------------------------------VIEWS---------------------------------------
+--A mesma lógica se aplica as views, por exemplo:
+-- Contar views no banco 1
+USE [Nome_Do_Seu_Banco1];
+GO
+SELECT 
+    v.name AS ViewName,
+    c.name AS ColumnName,
+    ty.name AS DataType,
+    c.max_length AS MaxLength,
+    c.precision AS Precision,
+    c.scale AS Scale
+    
+INTO #TempViewsDB1
+    
+FROM 
+    sys.views v
+JOIN 
+    sys.columns c ON v.object_id = c.object_id
+JOIN 
+    sys.types ty ON c.user_type_id = ty.user_type_id
+ORDER BY 
+    v.name, c.column_id;
+
+-- Contar views
+SELECT COUNT(DISTINCT v.name) AS ViewCount
+FROM sys.views v;
+
+-- Contar views no banco 2
+USE [Nome_Do_Seu_Banco2];
+GO
+SELECT 
+    v.name AS ViewName,
+    c.name AS ColumnName,
+    ty.name AS DataType,
+    c.max_length AS MaxLength,
+    c.precision AS Precision,
+    c.scale AS Scale
+    
+INTO #TempViewsDB2
+    
+FROM 
+    sys.views v
+JOIN 
+    sys.columns c ON v.object_id = c.object_id
+JOIN 
+    sys.types ty ON c.user_type_id = ty.user_type_id
+ORDER BY 
+    v.name, c.column_id;
+
+-- Contar views
+SELECT COUNT(DISTINCT v.name) AS ViewCount
+FROM sys.views v;
+
+----------------------------------------------
+
+-- Encontrar views presentes apenas no primeiro banco de dados
+SELECT ViewName
+FROM #TempViewsDB1
+EXCEPT
+SELECT ViewName
+FROM #TempViewsDB2;
+
+-- Encontrar views presentes apenas no segundo banco de dados
+SELECT ViewName
+FROM #TempViewsDB2
+EXCEPT
+SELECT ViewName
+FROM #TempViewsDB1;
+
+----------------------------------------------
+
+--- Drop tables Temp
+DROP TABLE #TempViewsDB1;
+DROP TABLE #TempViewsDB2;
