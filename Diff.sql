@@ -1,3 +1,10 @@
+------------------------------Tamanho----Bancos----------------------------------
+
+USE [Nome_Do_Seu_Banco1];  -- Verifica o tamanho geral do seu banco1
+SELECT name, size FROM sys.database_files where name = 'Nome_Do_Seu_Banco1';
+USE [Nome_Do_Seu_Banco2]; -- Verifica o tamanho geral do seu banco2
+SELECT name, size FROM sys.database_files where name = 'Nome_Do_Seu_Banco2';
+
 -----------------------------------Tabelas---------------------------------------
 --Banco 1
 USE [Nome_Do_Seu_Banco1]; --Faz a mudança de conexão para o primeiro banco
@@ -154,3 +161,91 @@ FROM #TempViewsDB1;
 --- Drop tables Temp
 DROP TABLE #TempViewsDB1;
 DROP TABLE #TempViewsDB2;
+
+-----------------------------------indices---------------------------------------
+--Mesma lógica aplicada aos indices
+-- Contagem de indices no banco 1
+USE [Nome_Do_Seu_Banco1];
+GO
+
+-- Criacao de uma tabela temporaria para armazenar informacoes sobre indices do banco 1
+SELECT 
+    t.name AS TableName,
+    i.name AS IndexName,
+    i.type_desc AS IndexType,
+    ic.index_column_id AS ColumnID,
+    c.name AS ColumnName,
+    ic.key_ordinal AS KeyOrdinal,
+    ic.is_included_column AS IsIncludedColumn
+INTO #TempIndexesDB1
+FROM 
+    sys.indexes i
+JOIN 
+    sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+JOIN 
+    sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+JOIN 
+    sys.tables t ON i.object_id = t.object_id
+WHERE 
+    i.type > 0 -- Ignora indices internos
+ORDER BY 
+    t.name, i.name, ic.index_column_id;
+
+-- Contagem de indices
+SELECT COUNT(DISTINCT i.name) AS IndexCountWAU
+FROM sys.indexes i
+WHERE i.type > 0; -- Ignora indices internos
+
+-- Contagem de indices no banco 2
+USE [Nome_Do_Seu_Banco2];
+GO
+
+-- Criacao de uma tabela temporaria para armazenar informacoes sobre indices do banco 2
+SELECT 
+    t.name AS TableName,
+    i.name AS IndexName,
+    i.type_desc AS IndexType,
+    ic.index_column_id AS ColumnID,
+    c.name AS ColumnName,
+    ic.key_ordinal AS KeyOrdinal,
+    ic.is_included_column AS IsIncludedColumn
+INTO #TempIndexesDB2
+FROM 
+    sys.indexes i
+JOIN 
+    sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+JOIN 
+    sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+JOIN 
+    sys.tables t ON i.object_id = t.object_id
+WHERE 
+    i.type > 0 -- Ignora indices internos
+ORDER BY 
+    t.name, i.name, ic.index_column_id;
+
+-- Contagem de indices
+SELECT COUNT(DISTINCT i.name) AS IndexCountEngTools
+FROM sys.indexes i
+WHERE i.type > 0; -- Ignora indices internos
+
+----------------------------------------------
+
+-- Encontra indices presentes apenas no primeiro banco de dados
+SELECT TableName, IndexName
+FROM #TempIndexesDB1
+EXCEPT
+SELECT TableName, IndexName
+FROM #TempIndexesDB2;
+
+-- Encontra indices presentes apenas no segundo banco de dados
+SELECT TableName, IndexName
+FROM #TempIndexesDB2
+EXCEPT
+SELECT TableName, IndexName
+FROM #TempIndexesDB1;
+
+----------------------------------------------
+
+--- Drop tabelas Temp
+DROP TABLE #TempIndexesDB1;
+DROP TABLE #TempIndexesDB2;
